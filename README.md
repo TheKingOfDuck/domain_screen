@@ -2,6 +2,9 @@
 
 网站信息批量采集脚本。
 
+## log
+
+20190724:感谢\xeb\xfe师傅帮忙修复一个bug。
 
 [bcScan](https://github.com/TheKingOfDuck/bcScan)的升级版本，包括但不限于提升了截图的速度，报告的友好度。
 
