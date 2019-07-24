@@ -1,6 +1,6 @@
-# webInfoScan
+# domain_screen
 
-网站信息批量采集脚本。
+批量采集站点基础信息&截图。
 
 ## log
 
