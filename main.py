@@ -2,12 +2,9 @@
 
 __author__ = 'CoolCat'
 
-
-
-
 import asyncio
 from pyppeteer import launch
-
+import sys
 
 # -*- coding: utf-8 -*-
 """
@@ -32,16 +29,11 @@ import socket
 
 global info
 
-
-
-
-
 htmlHeader = """
 <!DOCTYPE html>
 <head>
-  
+
   <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-  <meta http-equiv="refresh" content="2">
   <link href="../template_files/main.css" rel="stylesheet" type="text/css">
   <title>子域名扫描报告</title></head>
 <body style="padding-right: 320px;">
@@ -85,24 +77,22 @@ htmlfooter = """
             </div>
           </div>
         </div>
-        
+
 """
 
-
 htmlcat2 = """
-
                     <li class="nav-item nav-level-1">
                         <a class="nav-link" href="#domain.com">
                             <span class="nav-number">nnnnn.</span>
                             <span class="nav-text">domain.com</span></a>
                     </li>
-
 """
 
 
 def getIP(domain):
     myaddr = socket.getaddrinfo(domain, 'http')
     return "IP：" + str(myaddr[0][4][0])
+
 
 def getInfo(res):
     try:
@@ -117,13 +107,15 @@ def getInfo(res):
         pass
     return "Server:" + str(Server) + "\t    Code:" + str(code)
 
+
 def scanurl(url):
-    headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/52.0.2743.116 Safari/537.36 Edge/15.15063'}
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/52.0.2743.116 Safari/537.36 Edge/15.15063'}
     res = requests.get(url=url, headers=headers, timeout=10)
     return res
 
-def urlformat(site):
 
+def urlformat(site):
     site = site.replace("\"", "").replace("\n", "")
     if "http" in site:
         return site
@@ -132,11 +124,11 @@ def urlformat(site):
     else:
         pass
 
-def outPut(target,title,imageName):
+
+def outPut(target, title, imageName):
     ip = getIP(str(re.compile('http://(.*?)/').findall(target)[0]))
 
     domain = target.replace("https://", "").replace("http://", "").replace("/", "")
-
 
     temp = """
           <h1 id="domain1234">title1234</h1>
@@ -149,34 +141,42 @@ def outPut(target,title,imageName):
 
     ### temp瞎几把加了几个1234是为了防止提取到的信息中包含这几个字符串，会乱掉。
 
-    temp = temp.replace('domain1234',domain).replace('title1234',title).replace('httpurl1234',target).replace('ip1234',ip).replace('info1234',info).replace('cat.png1234',"../images/" + imageName)
+    temp = temp.replace('domain1234', domain).replace('title1234', title).replace('httpurl1234', target).replace(
+        'ip1234', ip).replace('info1234', info).replace('cat.png1234', "../images/" + imageName)
 
-    f = open("./reports/" + reportFile,"a")
+    f = open("./reports/" + reportFile, "a")
     f.write(temp + "\n")
     f.close()
 
 
-
-
-
 async def screenshot(url):
-
-
-    browser = await launch(headless=True)
+    browser = await launch({'headless': True,
+                            'args': [
+                                '--disable-infobars',
+                                '–disable-dev-shm-usage',
+                                '–disable-setuid-sandbox',
+                                '–no-sandbox',
+                                '–no-zygote'
+                            ],
+                            'ignoreHTTPSErrors': True,
+                            'executablePath': '/Applications/Chromium.app/Contents/MacOS/Chromium'})
     page = await browser.newPage()
     await page.setViewport({'width': 1920, 'height': 1080})
     await page.goto(url)
-    imageName = url.replace("https://", "").replace("http://", "").replace("/","") + ".png"
+    imageName = url.replace("https://", "").replace("http://", "").replace("/", "") + ".png"
     await page.screenshot({'path': './images/' + imageName})
-    element = await page.querySelector('title')
-    title = await page.evaluate('(element) => element.textContent', element)
+    try:
+        element = await page.querySelector('title')
+        title = await page.evaluate('(element) => element.textContent', element)
+    except:
+        title = 'no title'
     await browser.close()
     outPut(url, title, imageName)
 
 
-
 if __name__ == '__main__':
-
+    if len(sys.argv) != 2:
+        print('python main.py urls.txt')
     if not os.path.exists('reports') or not os.path.exists('images'):
         try:
             os.makedirs("reports")
@@ -187,28 +187,22 @@ if __name__ == '__main__':
         except:
             pass
 
+    filename = os.path.splitext(sys.argv[1])
     htmlHeader = htmlHeader.replace('timeaaaaaaa', str(time.strftime("%Y-%m-%d")))
 
-    reportFile = str(time.strftime("%Y-%m-%d")) + ".html"
-
-
-
+    reportFile = str(time.strftime("%Y-%m-%d-{}".format(filename[0]))) + ".html"
 
     if os.path.exists("./reports/" + reportFile):
-
         os.remove("./reports/" + reportFile)
 
     f = open("./reports/" + reportFile, "w")
     f.write(htmlHeader)
     f.close()
 
-
-
-
     n = 0
     tmp = ""
 
-    for site in open("urls.txt"):
+    for site in open(sys.argv[1]):
         site = site.replace("\r", "").replace("\n", "").replace(" ", "")
         if site == "":
             pass
@@ -244,31 +238,26 @@ if __name__ == '__main__':
                     try:
                         asyncio.get_event_loop().run_until_complete(screenshot(url))
                         tmp += htmlcat2.replace("domain.com", domain).replace("nnnnn", str(n)) + "\n"
-                    except:
-                        pass
+                    except Exception as e:
+                        print(e)
 
             except:
 
                 pass
 
-
-    #写目录1
+    # 写目录1
 
     f = open("./reports/" + reportFile, "a")
     f.write(htmlcat)
     f.close()
 
-
-    #写目录2
+    # 写目录2
 
     f = open("./reports/" + reportFile, "a")
     f.write(tmp)
     f.close()
 
-    #乞讨信息
+    # 乞讨信息
     f = open("./reports/" + reportFile, "a")
     f.write(htmlfooter)
     f.close()
-
-
-
