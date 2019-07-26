@@ -5,6 +5,7 @@ __author__ = 'CoolCat'
 import asyncio
 from pyppeteer import launch
 import sys
+import shutil
 
 # -*- coding: utf-8 -*-
 """
@@ -28,7 +29,9 @@ import os
 import socket
 
 global info
+import urllib3
 
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 htmlHeader = """
 <!DOCTYPE html>
 <head>
@@ -111,7 +114,7 @@ def getInfo(res):
 def scanurl(url):
     headers = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/52.0.2743.116 Safari/537.36 Edge/15.15063'}
-    res = requests.get(url=url, headers=headers, timeout=10)
+    res = requests.get(url=url, headers=headers, timeout=5, verify=False)
     return res
 
 
@@ -144,25 +147,32 @@ def outPut(target, title, imageName):
     temp = temp.replace('domain1234', domain).replace('title1234', title).replace('httpurl1234', target).replace(
         'ip1234', ip).replace('info1234', info).replace('cat.png1234', "../images/" + imageName)
 
-    f = open("./reports/" + reportFile, "a")
-    f.write(temp + "\n")
-    f.close()
+    with open("./reports/" + reportFile, "a") as f:
+        f.write(temp + "\n")
 
 
 async def screenshot(url):
     browser = await launch({'headless': True,
                             'args': [
+                                '--disable-extensions',
                                 '--disable-infobars',
+                                '--hide-scrollbars',
                                 '–disable-dev-shm-usage',
+                                '--mute-audio',
                                 '–disable-setuid-sandbox',
                                 '–no-sandbox',
-                                '–no-zygote'
+                                '–no-zygote',
+                                '--window-size=1024,768',
+                                '--disable-gpu',
                             ],
+                            # 防止多开页面卡死
+                            'dumpio': True,
                             'ignoreHTTPSErrors': True,
                             'executablePath': '/Applications/Chromium.app/Contents/MacOS/Chromium'})
     page = await browser.newPage()
-    await page.setViewport({'width': 1920, 'height': 1080})
-    await page.goto(url)
+    await page.goto(url, timeout=10000)
+    await page.setViewport({'width': 1000, 'height': 698})
+    await page.waitFor(1000)
     imageName = url.replace("https://", "").replace("http://", "").replace("/", "") + ".png"
     await page.screenshot({'path': './images/' + imageName})
     try:
@@ -175,89 +185,80 @@ async def screenshot(url):
 
 
 if __name__ == '__main__':
-    if len(sys.argv) != 2:
-        print('python main.py urls.txt')
-    if not os.path.exists('reports') or not os.path.exists('images'):
-        try:
-            os.makedirs("reports")
-        except:
-            pass
-        try:
-            os.makedirs("images")
-        except:
-            pass
-
-    filename = os.path.splitext(sys.argv[1])
-    htmlHeader = htmlHeader.replace('timeaaaaaaa', str(time.strftime("%Y-%m-%d")))
-
-    reportFile = str(time.strftime("%Y-%m-%d-{}".format(filename[0]))) + ".html"
-
-    if os.path.exists("./reports/" + reportFile):
-        os.remove("./reports/" + reportFile)
-
-    f = open("./reports/" + reportFile, "w")
-    f.write(htmlHeader)
-    f.close()
-
-    n = 0
-    tmp = ""
-
-    for site in open(sys.argv[1]):
-        site = site.replace("\r", "").replace("\n", "").replace(" ", "")
-        if site == "":
-            pass
-        else:
-
-            url = urlformat(site)
-            print(url)
-            try:
-                res = scanurl(url)
-                print("[*]" + str(res.status_code) + "\t" + url)
-                try:
-                    info = getInfo(res)
-                except:
-                    info = None
-                    pass
-                # try:
-                #     print("[*]" + str(res.status_code) + "\t" + url)
-                #     # print(info)
-                #     filename = str(res.status_code) + ".txt"
-                # except:
-                #     pass
-                # try:
-                #     f = open("/reports/" + filename, "a")
-                #     f.write(url + "\t\t" + info + "\n")
-                #     f.close()
-                # except:
-                #     pass
-
-                if res.status_code == 200:
-                    n += 1
-                    domain = url.replace("https://", "").replace("http://", "").replace("/", "")
-
+    for root, dirs, files in os.walk(os.getcwd(), topdown=False):
+        for name in files:
+            file = os.path.splitext(name)
+            txtfilename, type = file
+            if type == '.txt' and 'finished' not in root:
+                srcfile = (root + '/' + name)
+                dstfile = (root + '/finished/' + name)
+                reportFilename = txtfilename
+                if not os.path.exists('reports') or not os.path.exists('images'):
                     try:
-                        asyncio.get_event_loop().run_until_complete(screenshot(url))
-                        tmp += htmlcat2.replace("domain.com", domain).replace("nnnnn", str(n)) + "\n"
-                    except Exception as e:
-                        print(e)
+                        os.makedirs("reports")
+                    except:
+                        pass
+                    try:
+                        os.makedirs("images")
+                    except:
+                        pass
 
-            except:
+                htmlHeader = htmlHeader.replace('timeaaaaaaa', str(time.strftime("%Y-%m-%d")))
 
-                pass
+                reportFile = str(time.strftime("%Y-%m-%d-{}".format(reportFilename))) + ".html"
 
-    # 写目录1
+                if os.path.exists("./reports/" + reportFile):
+                    os.remove("./reports/" + reportFile)
 
-    f = open("./reports/" + reportFile, "a")
-    f.write(htmlcat)
-    f.close()
+                with open("./reports/" + reportFile, "w") as f:
+                    f.write(htmlHeader)
 
-    # 写目录2
+                n = 0
+                tmp = ""
+                with open(srcfile) as sites:
+                    for site in sites:
+                        site = site.replace("\r", "").replace("\n", "").replace(" ", "")
+                        if site == "":
+                            pass
+                        else:
 
-    f = open("./reports/" + reportFile, "a")
-    f.write(tmp)
-    f.close()
+                            url = urlformat(site)
+                            print(url)
+                            try:
+                                res = scanurl(url)
+                                print("[*]" + str(res.status_code) + "\t" + url)
+                                try:
+                                    info = getInfo(res)
+                                except:
+                                    info = None
+                                    pass
 
-    # 乞讨信息
-    f = open("./reports/" + reportFile, "a")
-    f.write(htmlfooter)
-    f.close()
+                                if res.status_code == 200 or res.status_code == 403 or res.status_code == 404:
+                                    n += 1
+                                    domain = url.replace("https://", "").replace("http://", "").replace("/", "")
+
+                                    try:
+                                        asyncio.get_event_loop().run_until_complete(screenshot(url))
+                                        tmp += htmlcat2.replace("domain.com", domain).replace("nnnnn", str(n)) + "\n"
+                                    except Exception as e:
+                                        pass
+
+                            except:
+
+                                pass
+
+                    # 写目录1
+
+                    with open("./reports/" + reportFile, "a") as f:
+                        f.write(htmlcat)
+
+                    # 写目录2
+
+                    with open("./reports/" + reportFile, "a") as f:
+                        f.write(tmp)
+
+                    # 乞讨信息
+                    with open("./reports/" + reportFile, "a") as f:
+                        f.write(htmlfooter)
+
+                    shutil.move(srcfile, dstfile)
