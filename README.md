@@ -15,6 +15,6 @@
 py3环境下运行，报告生成在report目录下。依赖缺啥就自己pip装啥就OK了。
 use:python3 main.py
 
-点击下图可查看视屏。
+
 
 ![CoolCat](https://github.com/TheKingOfDuck/webInfoScan/blob/master/screenshot2.png)
