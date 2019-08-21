@@ -21,6 +21,6 @@ python3 main.py
 
 
 
-![CoolCat](https://github.com/TheKingOfDuck/webInfoScan/blob/master/screenshot2.png)
+![screenshot2.png](https://i.loli.net/2019/08/21/epV67dUFoHwiaQn.png)
 
 
