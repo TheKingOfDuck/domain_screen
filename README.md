@@ -17,4 +17,4 @@ use:python3 main.py
 
 点击下图可查看视屏。
 
-[![CoolCat](https://github.com/TheKingOfDuck/webInfoScan/blob/master/screenshot2.png)](https://v.youku.com/v_show/id_XNDI4MDg1MTc4OA==.html?spm=a2h3j.8428770.3416059.1)
+![CoolCat](https://github.com/TheKingOfDuck/webInfoScan/blob/master/screenshot2.png)
