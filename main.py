@@ -185,6 +185,8 @@ async def screenshot(url):
 
 
 if __name__ == '__main__':
+    if os.path.exists('finished') == False:
+        os.mkdir('finished')
     for root, dirs, files in os.walk(os.getcwd(), topdown=False):
         for name in files:
             file = os.path.splitext(name)
